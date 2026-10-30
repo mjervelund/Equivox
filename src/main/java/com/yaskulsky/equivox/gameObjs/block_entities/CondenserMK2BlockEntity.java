@@ -45,9 +45,7 @@ public class CondenserMK2BlockEntity extends CondenserBlockEntity {
 			}
 		};
 		this.automationOutput = new WrappedItemHandler(getOutput(), WrappedItemHandler.WriteMode.OUT);
-		this.automationJoined = new PECombinedItemStacks(
-				(PEItemStacksHandler) automationInput,
-				(PEItemStacksHandler) automationOutput);
+		this.automationJoined = new PECombinedItemStacks(automationInput, automationOutput);
 		return automationJoined;
 	}
 
