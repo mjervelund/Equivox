@@ -52,7 +52,9 @@ public final class ArcaneTabletHelper {
 		if (player instanceof ServerPlayer serverPlayer) {
 			provider.syncKnowledgeChange(serverPlayer, cleaned, true);
 		}
-		long value = IEMCProxy.INSTANCE.getValue(cleaned);
+		//Pay what burning this exact stack pays: the cleaned info drops data like damage,
+		// so its value would pay a worn out tool as if it was new
+		long value = IEMCProxy.INSTANCE.getSellValue(raw);
 		provider.setEmc(provider.getEmc().add(BigInteger.valueOf(value).multiply(BigInteger.valueOf(stack.getCount()))));
 		if (player instanceof ServerPlayer serverPlayer) {
 			provider.syncEmc(serverPlayer);
