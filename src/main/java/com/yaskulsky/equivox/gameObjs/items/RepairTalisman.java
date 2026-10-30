@@ -93,7 +93,13 @@ public class RepairTalisman extends ItemPE implements IAlchBagItem, IAlchChestIt
 
 	@Override
 	public boolean updateInAlchBag(@NotNull PEItemStacksHandler inv, @NotNull Player player, @NotNull ItemStack stack) {
-		return !player.level().isClientSide() && updateInHandler(inv, stack);
+		if (player.level().isClientSide()) {
+			return false;
+		}
+		//A true return makes the whole bag resync to the client, which does not need the talisman's cooldown,
+		// so only report the ticks that repaired something (the bag itself is saved with the player either way)
+		boolean repairing = stack.getOrDefault(PEDataComponentTypes.COOLDOWN, (byte) 0) == 0;
+		return updateInHandler(inv, stack) && repairing;
 	}
 
 	private boolean updateInHandler(@NotNull ResourceHandler<ItemResource> inv, @NotNull ItemStack stack) {
