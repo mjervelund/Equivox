@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import com.yaskulsky.equivox.PECore;
 import com.yaskulsky.equivox.api.ItemInfo;
+import com.yaskulsky.equivox.config.EquivoxConfig;
 import com.yaskulsky.equivox.emc.EMCMappingHandler;
 import com.yaskulsky.equivox.network.packets.IPEPacket;
 import net.minecraft.core.RegistryAccess;
@@ -12,6 +13,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.connection.ConnectionType;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
@@ -39,6 +41,10 @@ public record SyncEmcPKT(Object2LongMap<ItemInfo> data) implements IPEPacket {
 
 	public static SyncEmcPKT serializeEmcData(RegistryAccess registryAccess) {
 		SyncEmcPKT data = EMCMappingHandler.createPacketData();
+		if (FMLEnvironment.isProduction() && !EquivoxConfig.common.debugLogging.get() && !PECore.LOGGER.isDebugEnabled()) {
+			//The size would not be logged, so skip encoding the whole map an extra time
+			return data;
+		}
 		//Simulate encoding the EMC packet to get an accurate size
 		RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), registryAccess, ConnectionType.NEOFORGE);
 		try {
