@@ -15,18 +15,24 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import com.yaskulsky.equivox.api.inventory.PEItemStacksHandler;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Range;
 
 public abstract class EmcBlockEntity extends BaseEmcBlockEntity {
 
 	private boolean updateComparators;
 	private long lastSave;
+	//Neighbouring IEmcStorage lookups for sendToAllAcceptors, indexed by Direction#ordinal; created on first use on the server
+	@Nullable
+	private List<BlockCapabilityCache<IEmcStorage, @Nullable Direction>> acceptorCaches;
 
 	public EmcBlockEntity(BlockEntityTypeRegistryObject<? extends EmcBlockEntity> type, BlockPos pos, BlockState state) {
 		this(type, pos, state, Long.MAX_VALUE);
@@ -115,8 +121,7 @@ public abstract class EmcBlockEntity extends BaseEmcBlockEntity {
 		long sentEmc = 0;
 		List<IEmcStorage> targets = new ArrayList<>();
 		for (Direction dir : Constants.DIRECTIONS) {
-			//Make sure the neighboring block is loaded as if we are on a chunk border on the edge of loaded chunks this may not be the case
-			IEmcStorage theirEmcStorage = WorldHelper.getCapability(level, PECapabilities.EMC_STORAGE_CAPABILITY, pos.relative(dir), dir.getOpposite());
+			IEmcStorage theirEmcStorage = getAcceptor(level, pos, dir);
 			if (theirEmcStorage != null) {
 				if (!isRelay() || !theirEmcStorage.isRelay()) {
 					//If they are both relays don't add the pairing to prevent thrashing
@@ -138,6 +143,22 @@ public abstract class EmcBlockEntity extends BaseEmcBlockEntity {
 			}
 		}
 		return sentEmc;
+	}
+
+	@Nullable
+	private IEmcStorage getAcceptor(@NotNull Level level, BlockPos pos, Direction dir) {
+		if (level instanceof ServerLevel serverLevel && pos.equals(worldPosition)) {
+			if (acceptorCaches == null) {
+				acceptorCaches = new ArrayList<>(Constants.DIRECTIONS.length);
+				for (Direction side : Direction.values()) {
+					acceptorCaches.add(BlockCapabilityCache.create(PECapabilities.EMC_STORAGE_CAPABILITY, serverLevel, pos.relative(side), side.getOpposite()));
+				}
+			}
+			//The cache also returns null while the neighbour's chunk is not loaded
+			return acceptorCaches.get(dir.ordinal()).getCapability();
+		}
+		//Make sure the neighboring block is loaded as if we are on a chunk border on the edge of loaded chunks this may not be the case
+		return WorldHelper.getCapability(level, PECapabilities.EMC_STORAGE_CAPABILITY, pos.relative(dir), dir.getOpposite());
 	}
 
 	protected class StackHandler extends PEItemStacksHandler {
