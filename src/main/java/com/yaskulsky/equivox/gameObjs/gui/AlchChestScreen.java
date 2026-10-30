@@ -18,8 +18,8 @@ public class AlchChestScreen extends PEContainerScreen<AlchChestContainer> {
 
 	@Override
 	protected void extractLabels(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-		graphics.text(font, title, (imageWidth - font.width(title)) / 2, 4, PEGuiGraphics.LABEL_COLOR, false);
-		graphics.text(font, playerInventoryTitle, 48, 140, PEGuiGraphics.LABEL_COLOR, false);
+		//Don't draw the title or inventory label: the texture has no room for them, so they would
+		// overlap the top and bottom rows of the 13x8 grid
 	}
 
 	@Override
