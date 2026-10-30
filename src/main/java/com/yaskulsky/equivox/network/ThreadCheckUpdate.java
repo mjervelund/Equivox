@@ -4,12 +4,12 @@ import com.yaskulsky.equivox.PECore;
 import com.yaskulsky.equivox.utils.text.PELang;
 import com.yaskulsky.equivox.utils.text.TextComponentUtil;
 import net.minecraft.client.player.LocalPlayer;
+import java.lang.reflect.Method;
 import java.net.URI;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.util.TimeUtil;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.VersionChecker;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.loading.FMLConfig;
 import net.neoforged.fml.loading.FMLConfig.ConfigValue;
@@ -35,29 +35,47 @@ public class ThreadCheckUpdate extends Thread {
 			return;
 		}
 		IModInfo info = PECore.MOD_CONTAINER.getModInfo();
-		VersionChecker.CheckResult result = null;
+		Object result = null;
+		try {
+			//VersionChecker moved from net.neoforged.fml to net.neoforged.neoforge.common during 26.3 (and dropped Status.PENDING,
+			// returning null while the check runs), so look it up by name to work on either side of the move
+			Method getResult = versionChecker().getMethod("getResult", IModInfo.class);
+			int tries = 0;
+			do {
+				Object res = getResult.invoke(null, info);
+				if (res != null && !"PENDING".equals(enumName(res, "status"))) {
+					result = res;
+				}
+				try {
+					Thread.sleep(TimeUtil.MILLISECONDS_PER_SECOND);
+				} catch (InterruptedException ignored) {
+				}
+				tries++;
+			} while (result == null && tries < 10);
 
-		int tries = 0;
-		do {
-			VersionChecker.CheckResult res = VersionChecker.getResult(info);
-			if (res.status() != VersionChecker.Status.PENDING) {
-				result = res;
+			if (result == null) {
+				PECore.LOGGER.warn("Update check failed.");
+				return;
 			}
-			try {
-				Thread.sleep(TimeUtil.MILLISECONDS_PER_SECOND);
-			} catch (InterruptedException ignored) {
+
+			if ("OUTDATED".equals(enumName(result, "status"))) {
+				target = (ComparableVersion) result.getClass().getMethod("target").invoke(result);
 			}
-			tries++;
-		} while (result == null && tries < 10);
-
-		if (result == null) {
-			PECore.LOGGER.warn("Update check failed.");
-			return;
+		} catch (ReflectiveOperationException e) {
+			PECore.LOGGER.warn("Update check failed.", e);
 		}
+	}
 
-		if (result.status() == VersionChecker.Status.OUTDATED) {
-			target = result.target();
+	private static Class<?> versionChecker() throws ClassNotFoundException {
+		try {
+			return Class.forName("net.neoforged.neoforge.common.VersionChecker");
+		} catch (ClassNotFoundException e) {
+			return Class.forName("net.neoforged.fml.VersionChecker");
 		}
+	}
+
+	private static String enumName(Object record, String component) throws ReflectiveOperationException {
+		return ((Enum<?>) record.getClass().getMethod(component).invoke(record)).name();
 	}
 
 	@SubscribeEvent
