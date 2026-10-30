@@ -2,7 +2,10 @@ package com.yaskulsky.equivox.gameObjs.block_entities;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import com.yaskulsky.equivox.api.ItemInfo;
 import com.yaskulsky.equivox.api.capabilities.IKnowledgeProvider;
@@ -52,6 +55,10 @@ public class TransmutationProviderBlockEntity extends EmcBlockEntity implements 
 	@Nullable
 	private TransmutationRsNetwork rsNetwork;
 	private final List<ItemInfo> exposedKnowledge = new ArrayList<>();
+	//Size and hash of the owner's knowledge when exposedKnowledge was last rebuilt, and when it must next be rebuilt anyway (EMC remaps)
+	private int knowledgeSize = -1;
+	private int knowledgeHash;
+	private long nextKnowledgeRebuild;
 	@Nullable
 	private UUID owner;
 	private boolean tableLinked;
@@ -136,6 +143,8 @@ public class TransmutationProviderBlockEntity extends EmcBlockEntity implements 
 		refreshLinkState();
 	}
 
+	private static final int KNOWLEDGE_REBUILD_INTERVAL = 100;
+
 	public static void tickServer(Level level, BlockPos pos, BlockState state, TransmutationProviderBlockEntity be) {
 		be.tickExport(level);
 	}
@@ -143,6 +152,7 @@ public class TransmutationProviderBlockEntity extends EmcBlockEntity implements 
 	private void tickExport(Level level) {
 		refreshLinkState();
 		if (!isExportActive()) {
+			knowledgeSize = -1;
 			if (!exposedKnowledge.isEmpty()) {
 				exposedKnowledge.clear();
 				invalidateExport(level);
@@ -151,12 +161,14 @@ public class TransmutationProviderBlockEntity extends EmcBlockEntity implements 
 		}
 		ServerPlayer player = getOnlineOwner();
 		if (player == null) {
+			knowledgeSize = -1;
 			exposedKnowledge.clear();
 			return;
 		}
 		IKnowledgeProvider knowledge = player.getCapability(PECapabilities.KNOWLEDGE_CAPABILITY);
 		if (knowledge == null || knowledge.hasFullKnowledge()) {
 			boolean wasEmpty = exposedKnowledge.isEmpty();
+			knowledgeSize = -1;
 			exposedKnowledge.clear();
 			tomeBlocked = knowledge != null && knowledge.hasFullKnowledge();
 			if (!wasEmpty) {
@@ -165,13 +177,25 @@ public class TransmutationProviderBlockEntity extends EmcBlockEntity implements 
 			return;
 		}
 		tomeBlocked = false;
+		Set<ItemInfo> known = knowledge.getKnowledge();
+		int size = known.size();
+		int hash = known.hashCode();
+		long time = level.getGameTime();
+		if (size == knowledgeSize && hash == knowledgeHash && time < nextKnowledgeRebuild) {
+			return;
+		}
+		knowledgeSize = size;
+		knowledgeHash = hash;
+		nextKnowledgeRebuild = time + KNOWLEDGE_REBUILD_INTERVAL;
 		List<ItemInfo> next = new ArrayList<>();
-		for (ItemInfo info : knowledge.getKnowledge()) {
+		Map<ItemInfo, String> sortKeys = new HashMap<>();
+		for (ItemInfo info : known) {
 			if (IEMCProxy.INSTANCE.getValue(info) > 0) {
 				next.add(info);
+				sortKeys.put(info, BuiltInRegistries.ITEM.getKey(info.getItem().value()).toString());
 			}
 		}
-		next.sort(Comparator.comparing(info -> BuiltInRegistries.ITEM.getKey(info.getItem().value()).toString()));
+		next.sort(Comparator.comparing(sortKeys::get));
 		if (!next.equals(exposedKnowledge)) {
 			exposedKnowledge.clear();
 			exposedKnowledge.addAll(next);
