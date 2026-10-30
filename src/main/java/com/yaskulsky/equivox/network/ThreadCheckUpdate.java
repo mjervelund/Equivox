@@ -9,7 +9,7 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.util.TimeUtil;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.VersionChecker;
+import net.neoforged.fml.VersionChecker;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.loading.FMLConfig;
 import net.neoforged.fml.loading.FMLConfig.ConfigValue;
