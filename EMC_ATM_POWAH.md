@@ -1,6 +1,6 @@
 # EMC values — Allthemodium & Powah (bundled in mod)
 
-File: `data/equivox/pe_custom_conversions/atm_powah_compat.json`
+Files: `data/equivox/pe_custom_conversions/allthemodium_compat.json` and `powah_compat.json`, each loaded only when that mod is (`neoforge:conditions`).
 
 ## Powah baseline
 

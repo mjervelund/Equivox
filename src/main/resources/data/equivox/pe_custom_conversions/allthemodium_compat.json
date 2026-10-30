@@ -1,0 +1,36 @@
+{
+  "neoforge:conditions": [{ "type": "neoforge:mod_loaded", "modid": "allthemodium" }],
+  "comment": "Unofficial ATM / Powah EMC compat by Yaskulsky. Powah baseline: energized_steel = 2048 EMC (1×). See EMC_ATM_POWAH.md for multipliers. FE not read from NBT — cell EMC uses tier proxy (1000 FE = 1 EMC). Allthemodium ingot from PE Integration (122800).",
+  "values": {
+    "before": [
+      { "type": "equivox:item", "emc_value": 16, "id": "allthemodium:ancient_stone" },
+      { "type": "equivox:item", "emc_value": 16, "id": "allthemodium:ancient_leaves" },
+      { "type": "equivox:item", "emc_value": 16, "id": "allthemodium:ancient_sapling" },
+      { "type": "equivox:item", "emc_value": 64, "id": "allthemodium:ancient_debris" },
+      { "type": "equivox:item", "emc_value": 32, "id": "allthemodium:soul_stone" },
+      { "type": "equivox:item", "emc_value": 122800, "id": "allthemodium:allthemodium_ingot" },
+      { "type": "equivox:item", "emc_value": 13644, "id": "allthemodium:allthemodium_nugget" },
+      { "type": "equivox:item", "emc_value": 1105200, "id": "allthemodium:allthemodium_block" },
+      { "type": "equivox:item", "emc_value": 122800, "id": "allthemodium:allthemodium_dust" },
+      { "type": "equivox:item", "emc_value": 92200, "id": "allthemodium:raw_allthemodium" },
+      { "type": "equivox:item", "emc_value": 245600, "id": "allthemodium:vibranium_ingot" },
+      { "type": "equivox:item", "emc_value": 27289, "id": "allthemodium:vibranium_nugget" },
+      { "type": "equivox:item", "emc_value": 2210400, "id": "allthemodium:vibranium_block" },
+      { "type": "equivox:item", "emc_value": 245600, "id": "allthemodium:vibranium_dust" },
+      { "type": "equivox:item", "emc_value": 184400, "id": "allthemodium:raw_vibranium" },
+      { "type": "equivox:item", "emc_value": 491200, "id": "allthemodium:unobtainium_ingot" },
+      { "type": "equivox:item", "emc_value": 54578, "id": "allthemodium:unobtainium_nugget" },
+      { "type": "equivox:item", "emc_value": 4420800, "id": "allthemodium:unobtainium_block" },
+      { "type": "equivox:item", "emc_value": 491200, "id": "allthemodium:unobtainium_dust" },
+      { "type": "equivox:item", "emc_value": 368400, "id": "allthemodium:raw_unobtainium" }
+    ],
+    "conversion": [
+      {"count": 9, "ingredients": [{"type": "equivox:item", "id": "allthemodium:allthemodium_nugget"}], "output": {"type": "equivox:item", "id": "allthemodium:allthemodium_ingot"}},
+      {"ingredients": [{"type": "equivox:item", "amount": 9, "id": "allthemodium:allthemodium_ingot"}], "output": {"type": "equivox:item", "id": "allthemodium:allthemodium_block"}},
+      {"count": 9, "ingredients": [{"type": "equivox:item", "id": "allthemodium:vibranium_nugget"}], "output": {"type": "equivox:item", "id": "allthemodium:vibranium_ingot"}},
+      {"ingredients": [{"type": "equivox:item", "amount": 9, "id": "allthemodium:vibranium_ingot"}], "output": {"type": "equivox:item", "id": "allthemodium:vibranium_block"}},
+      {"count": 9, "ingredients": [{"type": "equivox:item", "id": "allthemodium:unobtainium_nugget"}], "output": {"type": "equivox:item", "id": "allthemodium:unobtainium_ingot"}},
+      {"ingredients": [{"type": "equivox:item", "amount": 9, "id": "allthemodium:unobtainium_ingot"}], "output": {"type": "equivox:item", "id": "allthemodium:unobtainium_block"}}
+    ]
+  }
+}

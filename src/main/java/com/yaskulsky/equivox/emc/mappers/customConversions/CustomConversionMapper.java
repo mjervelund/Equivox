@@ -1,6 +1,7 @@
 package com.yaskulsky.equivox.emc.mappers.customConversions;
 
 import com.google.gson.JsonElement;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongSortedMaps;
@@ -11,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import com.yaskulsky.equivox.PECore;
 import com.yaskulsky.equivox.api.conversion.ConversionGroup;
 import com.yaskulsky.equivox.api.conversion.CustomConversion;
@@ -29,6 +31,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.ReloadableServerResources;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.neoforged.neoforge.common.conditions.ConditionalOps;
+import net.neoforged.neoforge.common.conditions.ICondition;
 import org.apache.logging.log4j.util.TriConsumer;
 
 @EMCMapper
@@ -57,16 +61,19 @@ public class CustomConversionMapper implements IEMCMapper<NormalizedSimpleStack,
 	@Override
 	public void addMappings(IMappingCollector<NormalizedSimpleStack, Long> mapper, ReloadableServerResources serverResources,
 			RegistryAccess registryAccess, ResourceManager resourceManager) {
-		Map<Identifier, CustomConversionFile> files = load(registryAccess, resourceManager);
+		Map<Identifier, CustomConversionFile> files = load(registryAccess, serverResources.getConditionContext(), resourceManager);
 		for (CustomConversionFile file : files.values()) {
 			addMappingsFromFile(file, mapper);
 		}
 	}
 
-	private static Map<Identifier, CustomConversionFile> load(RegistryAccess registryAccess, ResourceManager resourceManager) {
+	private static final Codec<Optional<CustomConversionFile>> CONDITIONAL_CODEC = ConditionalOps.createConditionalCodec(CustomConversionFile.CODEC);
+
+	private static Map<Identifier, CustomConversionFile> load(RegistryAccess registryAccess, ICondition.IContext conditionContext, ResourceManager resourceManager) {
 		Map<Identifier, CustomConversionFile> loading = new HashMap<>();
 
-		RegistryOps<JsonElement> serializationContext = registryAccess.createSerializationContext(JsonOps.INSTANCE);
+		//Files may have neoforge:conditions, e.g. to only load compat values when the other mod is present
+		RegistryOps<JsonElement> serializationContext = new ConditionalOps<>(registryAccess.createSerializationContext(JsonOps.INSTANCE), conditionContext);
 		// Find all data/<domain>/pe_custom_conversions/foo/bar.json
 		for (Map.Entry<Identifier, List<Resource>> entry : CONVERSION_LISTER.listMatchingResourceStacks(resourceManager).entrySet()) {
 			Identifier file = entry.getKey();//<domain>:foo/bar
@@ -78,7 +85,8 @@ public class CustomConversionMapper implements IEMCMapper<NormalizedSimpleStack,
 			// Iterate through all copies of this conversion, from lowest to highest priority datapack, merging the results together
 			for (Resource resource : entry.getValue()) {
 				try (Reader reader = resource.openAsReader()) {
-					Optional<CustomConversionFile> fileOptional = PECodecHelper.read(serializationContext, reader, CustomConversionFile.CODEC, "custom conversion file");
+					Optional<CustomConversionFile> fileOptional = PECodecHelper.read(serializationContext, reader, CONDITIONAL_CODEC, "custom conversion file")
+							.flatMap(Function.identity());
 					//noinspection OptionalIsPresent - Capturing lambda
 					if (fileOptional.isPresent()) {
 						loading.merge(conversionId, fileOptional.get(), CustomConversionFile::merge);
