@@ -261,6 +261,7 @@ repositories { RepositoryHandler handler ->
     exclusiveRepo(handler, 'https://maven2.bai.lol', 'lol.bai', 'mcp.mobius.waila')//WTHIT
     exclusiveRepo(handler, 'https://modmaven.dev/', 'mcjty.theoneprobe')
     exclusiveRepo(handler, 'https://www.cursemaven.com', 'curse.maven')
+    exclusiveRepo(handler, 'https://api.modrinth.com/maven', 'maven.modrinth')
 }
 
 test {
@@ -286,7 +287,7 @@ dependencies {
     // JEI / EMI APIs: always compile so transmutation/arcane tablet + transfer ships in ATM JARs
     compileOnly("mezz.jei:jei-${minecraftDepVersion}-neoforge-api:${jei_version}")
     // Refined Storage: Transmutation Provider attaches to RS Grid (optional at runtime)
-    compileOnly(files(rootProject.file('.rs-ref/refinedstorage-neoforge-3.2.1.jar')))
+    compileOnly("maven.modrinth:refined-storage:${refinedstorage_version}")
 
     if (enableOptionalIntegrations) {
         if (recipe_viewer == 'jei' || recipe_viewer == 'hybrid') {
