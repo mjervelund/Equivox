@@ -192,6 +192,13 @@ public class CondenserBlockEntity extends EmcChestBlockEntity {
 		if (lockInfo == null) {
 			return false;
 		}
+		//The persistent info keeps the item, and a stack without component changes is its own persistent info, so only
+		// build one (this runs for every slot each tick) when the item matches and the stack has components to reduce
+		if (!stack.is(lockInfo.getItem())) {
+			return false;
+		} else if (stack.isComponentsPatchEmpty()) {
+			return !lockInfo.hasModifiedComponents();
+		}
 		//Compare our lock to the persistent item that the stack would have
 		return lockInfo.equals(IEMCProxy.INSTANCE.getPersistentInfo(ItemInfo.fromStack(stack)));
 	}
