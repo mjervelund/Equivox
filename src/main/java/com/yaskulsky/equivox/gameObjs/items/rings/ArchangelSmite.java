@@ -10,6 +10,7 @@ import com.yaskulsky.equivox.config.EquivoxConfig;
 import com.yaskulsky.equivox.gameObjs.entity.EntityHomingArrow;
 import com.yaskulsky.equivox.gameObjs.registries.PEDataComponentTypes;
 import com.yaskulsky.equivox.utils.MathUtils;
+import com.yaskulsky.equivox.utils.PlayerHelper;
 import com.yaskulsky.equivox.utils.text.PELang;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -37,6 +38,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class ArchangelSmite extends PEToggleItem implements IPedestalItem {
 
+	private static final int VOLLEY_COOLDOWN = 2;
+
 	public ArchangelSmite(Properties props) {
 		super(props.component(PEDataComponentTypes.STORED_EMC, 0L));
 		NeoForge.EVENT_BUS.addListener(this::emptyLeftClick);
@@ -44,6 +47,11 @@ public class ArchangelSmite extends PEToggleItem implements IPedestalItem {
 	}
 
 	public static void fireVolley(ItemStack stack, Player player) {
+		//Volleys are triggered by client packets (activate_archangel, block and entity left clicks), which a modified
+		// client can send many times per tick; each volley spawns 10 homing arrows
+		if (!PlayerHelper.checkCooldown(player, stack.getItem(), () -> VOLLEY_COOLDOWN)) {
+			return;
+		}
 		for (int i = 0; i < 10; i++) {
 			fireArrow(stack, player.level(), player, 4F);
 		}
