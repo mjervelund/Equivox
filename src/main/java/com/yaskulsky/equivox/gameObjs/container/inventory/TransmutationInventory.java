@@ -411,9 +411,15 @@ public class TransmutationInventory extends PECombinedItemStacks {
 	 * @apiNote Call on server only
 	 */
 	public void writeIntoOutputSlot(int slot, ItemStack item) {
-		long emcValue = IEMCProxy.INSTANCE.getValue(item);
-		if (emcValue > 0 && emcValue <= getAvailableEmcAsLong() && provider.hasKnowledge(item)) {
-			outputs.setStackInSlot(slot, item);
+		if (slot < 0 || slot >= outputs.getSlots()) {
+			return;
+		}
+		//The stack comes from the client: only keep the data components that knowledge is stored with,
+		// otherwise any extra components (block entity data, attribute modifiers, ...) would be created for free
+		ItemStack target = item.isEmpty() ? ItemStack.EMPTY : IEMCProxy.INSTANCE.getPersistentInfo(ItemInfo.fromStack(item)).createStack();
+		long emcValue = IEMCProxy.INSTANCE.getValue(target);
+		if (emcValue > 0 && emcValue <= getAvailableEmcAsLong() && provider.hasKnowledge(target)) {
+			outputs.setStackInSlot(slot, target);
 		} else {
 			outputs.setStackInSlot(slot, ItemStack.EMPTY);
 		}
