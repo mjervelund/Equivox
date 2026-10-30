@@ -4,6 +4,6 @@
     "bottom": "equivox:block/entropy_sink/other",
     "front": "equivox:block/entropy_sink/front",
     "side": "equivox:block/entropy_sink/other",
-    "top": "equivox:block/entropy_sink/top_1"
+    "top": "equivox:block/entropy_sink/top"
   }
 }

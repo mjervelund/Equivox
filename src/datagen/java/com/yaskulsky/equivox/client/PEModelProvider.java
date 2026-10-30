@@ -12,6 +12,7 @@ import com.yaskulsky.equivox.utils.Constants;
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
 import net.minecraft.client.data.models.ModelProvider;
+import net.minecraft.client.data.models.MultiVariant;
 import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
 import net.minecraft.client.data.models.model.ItemModelUtils;
 import net.minecraft.client.data.models.model.ModelLocationUtils;
@@ -31,6 +32,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplate;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 
@@ -74,7 +76,8 @@ public class PEModelProvider extends ModelProvider {
 		simpleBlocks(blockModels, PEBlocks.ALCHEMICAL_COAL, PEBlocks.MOBIUS_FUEL, PEBlocks.AETERNALIS_FUEL, PEBlocks.DARK_MATTER, PEBlocks.RED_MATTER);
 		registerTieredOrientable(blockModels, "collectors", PEBlocks.COLLECTOR, PEBlocks.COLLECTOR_MK2, PEBlocks.COLLECTOR_MK3);
 		registerTieredOrientable(blockModels, "relays", PEBlocks.RELAY, PEBlocks.RELAY_MK2, PEBlocks.RELAY_MK3);
-		registerTieredOrientable(blockModels, "entropy_sink", PEBlocks.ENTROPY_SINK, PEBlocks.ENTROPY_SINK_DARK, PEBlocks.ENTROPY_SINK_RED);
+		//The entropy sink tiers share a single top texture
+		registerTieredOrientable(blockModels, "entropy_sink", PEBlocks.ENTROPY_SINK, PEBlocks.ENTROPY_SINK_DARK, PEBlocks.ENTROPY_SINK_RED, "top", "top", "top");
 		registerOrientable(blockModels, PEBlocks.STELLAR_CONDENSER, "stellar_condenser", "top");
 		registerProviderOnline(blockModels);
 		registerFurnace(blockModels, PEBlocks.DARK_MATTER_FURNACE, "dm", "dark_matter_block");
@@ -316,27 +319,40 @@ public class PEModelProvider extends ModelProvider {
 				.put(TextureSlot.SIDE, texture("block/" + sideTexture))
 				.put(TextureSlot.FRONT, texture("block/matter_furnace/" + prefix + "_off"))
 				.put(TextureSlot.TOP, texture("block/" + sideTexture)), ModelTemplates.CUBE_ORIENTABLE);
-		blockModels.createFurnace(furnace.getBlock(), provider);
+		//Like BlockModelGenerators#createFurnace, but the lit front is matter_furnace/<prefix>_on instead of <block>_front_on
+		Block block = furnace.getBlock();
+		MultiVariant normalModel = BlockModelGenerators.plainVariant(provider.create(block, blockModels.modelOutput));
+		MultiVariant litModel = BlockModelGenerators.plainVariant(provider.get(block)
+				.updateTextures(t -> t.put(TextureSlot.FRONT, texture("block/matter_furnace/" + prefix + "_on")))
+				.createWithSuffix(block, "_on", blockModels.modelOutput));
+		blockModels.blockStateOutput.accept(MultiVariantGenerator.dispatch(block)
+				.with(BlockModelGenerators.createBooleanModelDispatch(BlockStateProperties.LIT, litModel, normalModel))
+				.with(BlockModelGenerators.ROTATION_HORIZONTAL_FACING));
 	}
 
 	private void registerTieredOrientable(BlockModelGenerators blockModels, String type, BlockRegistryObject<?, ?> base, BlockRegistryObject<?, ?> mk2, BlockRegistryObject<?, ?> mk3) {
+		registerTieredOrientable(blockModels, type, base, mk2, mk3, "top_1", "top_2", "top_3");
+	}
+
+	private void registerTieredOrientable(BlockModelGenerators blockModels, String type, BlockRegistryObject<?, ?> base, BlockRegistryObject<?, ?> mk2, BlockRegistryObject<?, ?> mk3,
+			String top1, String top2, String top3) {
 		Material side = texture("block/" + type + "/other");
 		TexturedModel.Provider baseProvider = TexturedModel.createDefault(block -> new TextureMapping()
 				.put(TextureSlot.SIDE, side)
 				.put(TextureSlot.FRONT, texture("block/" + type + "/front"))
-				.put(TextureSlot.TOP, texture("block/" + type + "/top_1"))
+				.put(TextureSlot.TOP, texture("block/" + type + "/" + top1))
 				.put(TextureSlot.BOTTOM, side), ModelTemplates.CUBE_ORIENTABLE_TOP_BOTTOM);
 		blockModels.createHorizontallyRotatedBlock(base.getBlock(), baseProvider);
 		TexturedModel.Provider mk2Provider = TexturedModel.createDefault(block -> new TextureMapping()
 				.put(TextureSlot.SIDE, side)
 				.put(TextureSlot.FRONT, texture("block/" + type + "/front"))
-				.put(TextureSlot.TOP, texture("block/" + type + "/top_2"))
+				.put(TextureSlot.TOP, texture("block/" + type + "/" + top2))
 				.put(TextureSlot.BOTTOM, side), ModelTemplates.CUBE_ORIENTABLE_TOP_BOTTOM);
 		blockModels.createHorizontallyRotatedBlock(mk2.getBlock(), mk2Provider);
 		TexturedModel.Provider mk3Provider = TexturedModel.createDefault(block -> new TextureMapping()
 				.put(TextureSlot.SIDE, side)
 				.put(TextureSlot.FRONT, texture("block/" + type + "/front"))
-				.put(TextureSlot.TOP, texture("block/" + type + "/top_3"))
+				.put(TextureSlot.TOP, texture("block/" + type + "/" + top3))
 				.put(TextureSlot.BOTTOM, side), ModelTemplates.CUBE_ORIENTABLE_TOP_BOTTOM);
 		blockModels.createHorizontallyRotatedBlock(mk3.getBlock(), mk3Provider);
 	}
