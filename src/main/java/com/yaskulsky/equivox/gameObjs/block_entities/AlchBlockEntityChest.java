@@ -35,10 +35,18 @@ public class AlchBlockEntityChest extends EmcChestBlockEntity {
 		public void onContentsChanged(int slot) {
 			super.onContentsChanged(slot);
 			if (level != null && !level.isClientSide()) {
-				inventoryChanged = true;
+				//The client copy only exists to tick IAlchChestItems, so only resync when one is added or removed. Changes
+				// made by an item's own server-side chest tick (e.g. the repair talisman cooldown) are not resynced: the client does not use them
+				boolean tickable = isChestTickable(getStackInSlot(slot));
+				if (tickable != chestTickable[slot] || tickable && !tickingItems) {
+					inventoryChanged = true;
+				}
+				chestTickable[slot] = tickable;
 			}
 		}
 	};
+	private final boolean[] chestTickable = new boolean[104];
+	private boolean tickingItems;
 	private boolean inventoryChanged;
 
 	public AlchBlockEntityChest(BlockPos pos, BlockState state) {
@@ -49,6 +57,9 @@ public class AlchBlockEntityChest extends EmcChestBlockEntity {
 	public void loadAdditional(@NotNull ValueInput input) {
 		super.loadAdditional(input);
 		inventory.deserialize(input);
+		for (int i = 0, slots = inventory.getSlots(); i < slots; i++) {
+			chestTickable[i] = isChestTickable(inventory.getStackInSlot(i));
+		}
 	}
 
 	@Override
@@ -70,6 +81,7 @@ public class AlchBlockEntityChest extends EmcChestBlockEntity {
 
 	public static void tickServer(Level level, BlockPos pos, BlockState state, AlchBlockEntityChest alchChest) {
 		StackHandler inventory = alchChest.inventory;
+		alchChest.tickingItems = true;
 		for (int i = 0, slots = inventory.getSlots(); i < slots; i++) {
 			ItemStack stack = inventory.getStackInSlot(i);
 			IAlchChestItem alchChestItem = stack.getCapability(PECapabilities.ALCH_CHEST_ITEM_CAPABILITY);
@@ -77,12 +89,17 @@ public class AlchBlockEntityChest extends EmcChestBlockEntity {
 				inventory.onContentsChanged(i);
 			}
 		}
+		alchChest.tickingItems = false;
 		if (alchChest.inventoryChanged) {
 			//If the inventory changed, resync so that the client can tick things properly
 			alchChest.inventoryChanged = false;
 			level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
 		}
 		alchChest.updateComparators(level, pos);
+	}
+
+	private static boolean isChestTickable(ItemStack stack) {
+		return !stack.isEmpty() && stack.getCapability(PECapabilities.ALCH_CHEST_ITEM_CAPABILITY) != null;
 	}
 
 	public ResourceHandler<ItemResource> getInventory() {
