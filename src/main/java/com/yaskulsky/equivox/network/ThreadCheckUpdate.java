@@ -40,7 +40,8 @@ public class ThreadCheckUpdate extends Thread {
 		int tries = 0;
 		do {
 			VersionChecker.CheckResult res = VersionChecker.getResult(info);
-			if (res.status() != VersionChecker.Status.PENDING) {
+			//null while the check is still running (26.3 dropped Status.PENDING)
+			if (res != null) {
 				result = res;
 			}
 			try {
