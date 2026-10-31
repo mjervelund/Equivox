@@ -93,6 +93,7 @@ import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -162,6 +163,7 @@ public class PECore {
 		NeoForge.EVENT_BUS.addListener(this::dataPackSync);
 		NeoForge.EVENT_BUS.addListener(this::registerCommands);
 		NeoForge.EVENT_BUS.addListener(this::serverStarting);
+		NeoForge.EVENT_BUS.addListener(this::serverStarted);
 		NeoForge.EVENT_BUS.addListener(this::serverQuit);
 		NeoForge.EVENT_BUS.addListener(PEPermissions::registerPermissionNodes);
 		NeoForge.EVENT_BUS.addListener(this::onModifyItemAttributes);
@@ -265,7 +267,7 @@ public class PECore {
 		}
 	}
 
-	private void dataPackSync(OnDatapackSyncEvent event) {
+	private void mapEmcIfPending() {
 		if (emcUpdateResourceManager != null) {
 			long start = System.currentTimeMillis();
 			//Clear the cached created tags
@@ -279,6 +281,16 @@ public class PECore {
 			}
 			emcUpdateResourceManager = null;
 		}
+	}
+
+	private void serverStarted(ServerStartedEvent event) {
+		//OnDatapackSyncEvent only fires when a player joins or on /reload, so without this a dedicated server has no EMC values
+		// (condensers, collectors feeding them, etc. do nothing) until the first player logs in
+		mapEmcIfPending();
+	}
+
+	private void dataPackSync(OnDatapackSyncEvent event) {
+		mapEmcIfPending();
 		if (event.getPlayer() == null) {
 			List<ServerPlayer> players = event.getPlayerList().getPlayers();
 			if (players.isEmpty()) {
