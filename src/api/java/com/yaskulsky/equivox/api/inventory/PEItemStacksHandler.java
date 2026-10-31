@@ -1,5 +1,6 @@
 package com.yaskulsky.equivox.api.inventory;
 
+import java.util.Objects;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.transfer.IndexModifier;
@@ -30,7 +31,10 @@ public class PEItemStacksHandler extends ItemStacksResourceHandler implements In
 
 	@NotNull
 	public ItemStack getStackInSlot(int slot) {
-		return copyToList().get(slot).copy();
+		//Read the one slot: copyToList() copies the whole list (every slot) first, so loops over all slots were quadratic
+		// (a 91-slot condenser did 91 x 91 element copies per tick). Same result: copyToList is shallow, the stack is copied here.
+		Objects.checkIndex(slot, size());
+		return stacks.get(slot).copy();
 	}
 
 	public void setStackInSlot(int slot, @NotNull ItemStack stack) {
