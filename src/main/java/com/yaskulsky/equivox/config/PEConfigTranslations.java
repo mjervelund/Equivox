@@ -111,6 +111,9 @@ public enum PEConfigTranslations implements IConfigTranslation {
 	SERVER_MISC_COLLECTOR_TICK_INTERVAL("server.misc.collector_tick_interval", "Collector Tick Interval",
 			"Collectors with an empty upgrade slot generate and send their EMC every this many ticks, the EMC of all those ticks at once, "
 			+ "so they produce the same EMC per hour for less server time. 1 = every tick."),
+	SERVER_MISC_RELAY_TICK_INTERVAL("server.misc.relay_tick_interval", "Relay Tick Interval",
+			"Relays with empty burn and charge slots send their EMC every this many ticks, the amount of all those ticks at once, "
+			+ "so they move the same EMC per hour for less server time. 1 = every tick."),
 
 	//EMC Mapping
 	MAPPING_DUMP_TO_FILE("mapping.dump_to_file", "Dump Everything To File",

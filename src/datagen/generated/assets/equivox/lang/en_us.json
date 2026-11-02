@@ -390,6 +390,8 @@
     "configuration.equivox.server.misc.collector_tick_interval":  "Collector Tick Interval",
     "configuration.equivox.server.misc.collector_tick_interval.tooltip":  "Collectors with an empty upgrade slot generate and send their EMC every this many ticks, the EMC of all those ticks at once, so they produce the same EMC per hour for less server time. 1 = every tick.",
     "configuration.equivox.server.misc.looking_at_display":  "Looking At Display",
+    "configuration.equivox.server.misc.relay_tick_interval":  "Relay Tick Interval",
+    "configuration.equivox.server.misc.relay_tick_interval.tooltip":  "Relays with empty burn and charge slots send their EMC every this many ticks, the amount of all those ticks at once, so they move the same EMC per hour for less server time. 1 = every tick.",
     "configuration.equivox.server.misc.looking_at_display.tooltip":  "Shows the EMC value of blocks when looking at them in Jade, TOP, or WTHIT.",
     "configuration.equivox.server.misc.tooltip":  "Settings for configuring misc options provided by Equivox.",
     "configuration.equivox.server.misc.unsafe_key_binds":  "Unsafe Key Binds",
