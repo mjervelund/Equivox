@@ -275,8 +275,9 @@ public class DMFurnaceBlockEntity extends EmcBlockEntity implements MenuProvider
 				furnace.litDuration = furnace.litTime = furnace.getItemBurnTime(fuelItem);
 				if (furnace.isLit() && !fuelItem.isEmpty()) {
 					ItemStack copy = fuelItem.copy();
+					//getFuelItem is a copy of the slot, so store the shrunk stack (shrinking the copy alone never used up the fuel)
 					fuelItem.shrink(1);
-					furnace.fuelInv.onContentsChanged(0);
+					furnace.fuelInv.setStackInSlot(0, fuelItem);
 					if (fuelItem.isEmpty()) {
 						ItemStackTemplate remainder = copy.getCraftingRemainder();
 						furnace.fuelInv.setStackInSlot(0, remainder != null ? remainder.create() : ItemStack.EMPTY);
@@ -394,8 +395,9 @@ public class DMFurnaceBlockEntity extends EmcBlockEntity implements MenuProvider
 				}
 			}
 
+			//getItemToSmelt is a copy of the slot, so store the shrunk stack (shrinking the copy alone never used up the input)
 			toSmelt.shrink(1);
-			inputInventory.onContentsChanged(0);
+			inputInventory.setStackInSlot(0, toSmelt);
 			setRecipeUsed(recipeResult.recipeHolder());
 		}
 	}

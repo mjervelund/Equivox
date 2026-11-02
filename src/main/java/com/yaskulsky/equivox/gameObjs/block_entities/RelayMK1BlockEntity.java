@@ -162,13 +162,16 @@ public class RelayMK1BlockEntity extends EmcBlockEntity implements MenuProvider,
 				long simulatedVal = relay.forceInsertEmc(emcHolder.extractEmc(stack, relay.chargeRate, EmcAction.SIMULATE), EmcAction.SIMULATE);
 				if (simulatedVal > 0) {
 					relay.forceInsertEmc(emcHolder.extractEmc(stack, simulatedVal, EmcAction.EXECUTE), EmcAction.EXECUTE);
+					//getBurn is a copy of the slot, so store the drained stack
+					relay.input.setStackInSlot(0, stack);
 				}
 			} else {
 				long emcVal = IEMCProxy.INSTANCE.getSellValue(stack);
 				if (emcVal > 0 && emcVal <= relay.getNeededEmc()) {
 					relay.forceInsertEmc(emcVal, EmcAction.EXECUTE);
-					relay.getBurn().shrink(1);
-					relay.input.onContentsChanged(0);
+					//getBurn is a copy of the slot: shrinking it alone left the item in place, so it gave its EMC every tick
+					stack.shrink(1);
+					relay.input.setStackInSlot(0, stack);
 				}
 			}
 		}
@@ -178,6 +181,10 @@ public class RelayMK1BlockEntity extends EmcBlockEntity implements MenuProvider,
 			if (emcHolder != null) {
 				long actualSent = emcHolder.insertEmc(chargeable, relay.getAvailableCharge(), EmcAction.EXECUTE);
 				relay.forceExtractEmc(actualSent, EmcAction.EXECUTE);
+				if (actualSent > 0) {
+					//getCharging is a copy of the slot, so store the charged stack
+					relay.output.setStackInSlot(0, chargeable);
+				}
 			}
 		}
 		relay.updateComparators(level, pos);
