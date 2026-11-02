@@ -61,12 +61,12 @@ public class CondenserMK2BlockEntity extends CondenserBlockEntity {
 
 	@Override
 	protected PEItemStacksHandler createInput() {
-		return new StackHandler(42);
+		return new CondenserStackHandler(42);
 	}
 
 	@Override
 	protected PEItemStacksHandler createOutput() {
-		return new StackHandler(42);
+		return new CondenserStackHandler(42);
 	}
 
 	@Override
@@ -91,6 +91,7 @@ public class CondenserMK2BlockEntity extends CondenserBlockEntity {
 	public void loadAdditional(@NotNull ValueInput input) {
 		super.loadAdditional(input);
 		getOutput().deserialize(input.childOrEmpty("output"));
+		invalidateScans();
 	}
 
 	@Override
