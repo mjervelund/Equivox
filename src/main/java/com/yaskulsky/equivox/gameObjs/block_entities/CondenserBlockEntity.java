@@ -37,6 +37,11 @@ public class CondenserBlockEntity extends EmcChestBlockEntity {
 	public static final ICapabilityProvider<CondenserBlockEntity, @Nullable Direction, ResourceHandler<ItemResource>> INVENTORY_PROVIDER =
 			(condenser, side) -> condenser.getAutomationHandler(side);
 
+	//Results of the last inventory scans, kept until the inventory or the lock changes (see invalidateScans), so an idle or
+	// full condenser does not rescan all its slots every tick. False means "scan again".
+	private boolean nothingToBurn;
+	private boolean spaceScanned;
+	private boolean hasSpaceResult;
 	protected final PEItemStacksHandler inputInventory = createInput();
 	private final PEItemStacksHandler outputInventory = createOutput();
 	@Nullable
@@ -96,7 +101,38 @@ public class CondenserBlockEntity extends EmcChestBlockEntity {
 	}
 
 	protected PEItemStacksHandler createInput() {
-		return new StackHandler(91);
+		return new CondenserStackHandler(91);
+	}
+
+	/**
+	 * Forgets the cached slot scans of {@link #condense()} and {@link #hasSpace()}. Called when the inventory, the lock or the
+	 * EMC values change.
+	 */
+	protected final void invalidateScans() {
+		nothingToBurn = false;
+		spaceScanned = false;
+	}
+
+	/**
+	 * Updates the cached scans for a change of one slot: only that slot's new contents can make the answers differ. Hoppers and
+	 * pipes pulling the output change a slot every few ticks, so this avoids a full rescan after each of them.
+	 */
+	private void slotChanged(PEItemStacksHandler handler, int slot) {
+		if (nothingToBurn || spaceScanned) {
+			ItemStack stack = handler.getStackInSlot(slot);
+			if (handler == inputInventory && !stack.isEmpty() && !isStackEqualToLock(stack)) {
+				//Something to burn now
+				nothingToBurn = false;
+			}
+			if (handler == outputInventory && spaceScanned) {
+				if (stack.isEmpty() || (isStackEqualToLock(stack) && stack.getCount() < stack.getMaxStackSize())) {
+					hasSpaceResult = true;
+				} else if (hasSpaceResult) {
+					//This slot may have been the one with space
+					spaceScanned = false;
+				}
+			}
+		}
 	}
 
 	protected PEItemStacksHandler createOutput() {
@@ -135,6 +171,8 @@ public class CondenserBlockEntity extends EmcChestBlockEntity {
 			return;
 		}
 		loadIndex = EMCMappingHandler.getLoadIndex();
+		//The lock (or whether it counts, see getLockInfo) and the persistent item infos used by isStackEqualToLock may change
+		invalidateScans();
 		if (lockInfo != null) {
 			long lockEmc = IEMCProxy.INSTANCE.getValue(lockInfo);
 			if (lockEmc > 0) {
@@ -153,13 +191,19 @@ public class CondenserBlockEntity extends EmcChestBlockEntity {
 	}
 
 	protected void condense() {
-		for (int i = 0, slots = inputInventory.getSlots(); i < slots; i++) {
-			ItemStack stack = inputInventory.getStackInSlot(i);
-			if (!stack.isEmpty() && !isStackEqualToLock(stack)) {
-				inputInventory.extractItem(i, 1, false);
-				forceInsertEmc(IEMCProxy.INSTANCE.getSellValue(stack), EmcAction.EXECUTE);
-				break;
+		if (!nothingToBurn) {
+			boolean burned = false;
+			for (int i = 0, slots = inputInventory.getSlots(); i < slots; i++) {
+				ItemStack stack = inputInventory.getStackInSlot(i);
+				if (!stack.isEmpty() && !isStackEqualToLock(stack)) {
+					inputInventory.extractItem(i, 1, false);
+					forceInsertEmc(IEMCProxy.INSTANCE.getSellValue(stack), EmcAction.EXECUTE);
+					burned = true;
+					break;
+				}
 			}
+			//Nothing but lock items and empty slots: skip this scan until the inventory or the lock changes
+			nothingToBurn = !burned;
 		}
 		if (this.getStoredEmc() >= requiredEmc && this.hasSpace()) {
 			forceExtractEmc(requiredEmc, EmcAction.EXECUTE);
@@ -175,6 +219,14 @@ public class CondenserBlockEntity extends EmcChestBlockEntity {
 	}
 
 	protected boolean hasSpace() {
+		if (!spaceScanned) {
+			hasSpaceResult = scanForSpace();
+			spaceScanned = true;
+		}
+		return hasSpaceResult;
+	}
+
+	private boolean scanForSpace() {
 		for (int i = 0, slots = outputInventory.getSlots(); i < slots; i++) {
 			ItemStack stack = outputInventory.getStackInSlot(i);
 			if (stack.isEmpty() || (isStackEqualToLock(stack) && stack.getCount() < stack.getMaxStackSize())) {
@@ -198,6 +250,7 @@ public class CondenserBlockEntity extends EmcChestBlockEntity {
 
 	public void setLockInfoFromPacket(@Nullable ItemInfo lockInfo) {
 		this.lockInfo = lockInfo;
+		invalidateScans();
 	}
 
 	public boolean attemptCondenserSet(Player player) {
@@ -238,6 +291,8 @@ public class CondenserBlockEntity extends EmcChestBlockEntity {
 		super.loadAdditional(input);
 		inputInventory.deserialize(input.childOrEmpty("input"));
 		lockInfo = input.read("lock", ItemInfo.CODEC).orElse(null);
+		//Loading replaces the stacks without onContentsChanged
+		invalidateScans();
 	}
 
 	@Override
@@ -258,5 +313,18 @@ public class CondenserBlockEntity extends EmcChestBlockEntity {
 	@Override
 	public Component getDisplayName() {
 		return TextComponentUtil.build(PEBlocks.CONDENSER);
+	}
+
+	protected class CondenserStackHandler extends StackHandler {
+
+		protected CondenserStackHandler(int size) {
+			super(size);
+		}
+
+		@Override
+		protected void onContentsChanged(int slot) {
+			super.onContentsChanged(slot);
+			slotChanged(this, slot);
+		}
 	}
 }
