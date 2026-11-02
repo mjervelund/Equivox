@@ -176,8 +176,11 @@ public abstract class EmcBlockEntity extends BaseEmcBlockEntity {
 		return sentEmc;
 	}
 
+	/**
+	 * @return The neighbouring IEmcStorage on the given side (cached on the server when pos is our position), or null if there is none
+	 */
 	@Nullable
-	private IEmcStorage getAcceptor(@NotNull Level level, BlockPos pos, Direction dir) {
+	protected IEmcStorage getAcceptor(@NotNull Level level, BlockPos pos, Direction dir) {
 		if (level instanceof ServerLevel serverLevel && pos.equals(worldPosition)) {
 			if (acceptorCaches == null) {
 				acceptorCaches = new ArrayList<>(Constants.DIRECTIONS.length);
