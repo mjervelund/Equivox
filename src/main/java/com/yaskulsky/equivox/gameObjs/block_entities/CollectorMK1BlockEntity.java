@@ -4,6 +4,7 @@ import com.yaskulsky.equivox.api.block_entity.IRelay;
 import com.yaskulsky.equivox.api.capabilities.PECapabilities;
 import com.yaskulsky.equivox.api.capabilities.item.IItemEmcHolder;
 import com.yaskulsky.equivox.api.proxy.IEMCProxy;
+import com.yaskulsky.equivox.config.EquivoxConfig;
 import com.yaskulsky.equivox.emc.FuelMapper;
 import com.yaskulsky.equivox.gameObjs.EnumCollectorTier;
 import com.yaskulsky.equivox.gameObjs.container.CollectorMK1Container;
@@ -65,6 +66,7 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 			super.onContentsChanged(slot);
 			if (slot == UPGRADING_SLOT) {
 				needsCompacting = true;
+				upgradingEmpty = getResource(UPGRADING_SLOT).isEmpty();
 			}
 		}
 	};
@@ -84,6 +86,10 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 	private boolean hasFuel;
 	//Start as needing to check for compacting when loaded
 	private boolean needsCompacting = true;
+	//Ticks since the collector last generated and sent EMC (see tickServer)
+	private int pendingTicks;
+	//Whether the upgrading slot is empty, kept here so the ticks that skip work do not read the inventory
+	private boolean upgradingEmpty = true;
 
 	public CollectorMK1BlockEntity(BlockPos pos, BlockState state) {
 		this(PEBlockEntityTypes.COLLECTOR, pos, state, EnumCollectorTier.MK1);
@@ -153,8 +159,19 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 			ItemHelper.compactInventory(collector.toSort, collector.toSort);
 			collector.needsCompacting = false;
 		}
+		collector.pendingTicks++;
+		int interval = EquivoxConfig.server.misc.collectorTickInterval.get();
+		if (interval > 1 && collector.upgradingEmpty && collector.pendingTicks < interval
+			&& Math.floorMod(level.getGameTime() + pos.hashCode(), interval) != 0) {
+			//With nothing to upgrade or charge a collector only generates EMC and sends it to its neighbours, so do that every
+			// interval ticks for all the ticks since the last time (same EMC per hour). The position spreads a farm's
+			// collectors over the interval.
+			return;
+		}
+		int ticks = collector.pendingTicks;
+		collector.pendingTicks = 0;
 		collector.checkFuelOrKlein();
-		collector.updateEmc(level, pos);
+		collector.updateEmc(level, pos, ticks);
 		collector.rotateUpgraded();
 		collector.updateComparators(level, pos);
 	}
@@ -190,9 +207,12 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 		}
 	}
 
-	private void updateEmc(@NotNull Level level, @NotNull BlockPos pos) {
+	/**
+	 * @param ticks The number of ticks since the last call: the EMC generated, sent and charged is that of this many ticks
+	 */
+	private void updateEmc(@NotNull Level level, @NotNull BlockPos pos, int ticks) {
 		if (!this.hasMaxedEmc()) {
-			unprocessedEMC += emcGen * (getSunLevel(level, pos) / 320.0f);
+			unprocessedEMC += emcGen * ticks * (getSunLevel(level, pos) / 320.0f);
 			if (unprocessedEMC >= 1) {
 				//Force add the EMC regardless of if we can receive EMC from external sources
 				unprocessedEMC -= forceInsertEmc((long) unprocessedEMC, EmcAction.EXECUTE);
@@ -206,7 +226,7 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 			if (hasChargeableItem) {
 				IItemEmcHolder emcHolder = upgrading.getCapability(PECapabilities.EMC_HOLDER_ITEM_CAPABILITY);
 				if (emcHolder != null) {
-					long actualInserted = emcHolder.insertEmc(upgrading, Math.min(getStoredEmc(), emcGen), EmcAction.EXECUTE);
+					long actualInserted = emcHolder.insertEmc(upgrading, Math.min(getStoredEmc(), emcGen * ticks), EmcAction.EXECUTE);
 					forceExtractEmc(actualInserted, EmcAction.EXECUTE);
 				}
 				return;
@@ -236,9 +256,9 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 				}
 			}
 			//Only send EMC when we are not upgrading fuel or charging an item
-			long toSend = this.getStoredEmc() < emcGen ? this.getStoredEmc() : emcGen;
+			long toSend = Math.min(this.getStoredEmc(), emcGen * ticks);
 			this.sendToAllAcceptors(level, pos, toSend);
-			sendRelayBonus(level, pos);
+			sendRelayBonus(level, pos, ticks);
 		}
 	}
 
@@ -321,24 +341,34 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 	public void loadAdditional(@NotNull ValueInput input) {
 		super.loadAdditional(input);
 		unprocessedEMC = input.getDoubleOr("unprocessed_emc", 0);
+		pendingTicks = input.getIntOr("pending_ticks", 0);
 		this.input.deserialize(input.childOrEmpty("input"));
 		auxSlots.deserialize(input.childOrEmpty("aux_slots"));
+		upgradingEmpty = auxSlots.getResource(UPGRADING_SLOT).isEmpty();
 	}
 
 	@Override
 	protected void saveAdditional(@NotNull ValueOutput output) {
 		super.saveAdditional(output);
 		output.putDouble("unprocessed_emc", unprocessedEMC);
+		if (pendingTicks > 0) {
+			output.putInt("pending_ticks", pendingTicks);
+		}
 		this.input.serialize(output.child("input"));
 		auxSlots.serialize(output.child("aux_slots"));
 	}
 
-	private static void sendRelayBonus(@NotNull Level level, @NotNull BlockPos pos) {
+	/**
+	 * Gives each neighbouring relay its bonus once per tick of the given number of ticks.
+	 */
+	private static void sendRelayBonus(@NotNull Level level, @NotNull BlockPos pos, int ticks) {
 		for (Direction dir : Constants.DIRECTIONS) {
 			BlockPos relayPos = pos.relative(dir);
 			BlockEntity blockEntity = WorldHelper.getBlockEntity(level, relayPos);
 			if (blockEntity instanceof IRelay relay) {
-				relay.addBonus(level, relayPos);
+				for (int i = 0; i < ticks; i++) {
+					relay.addBonus(level, relayPos);
+				}
 			}
 		}
 	}

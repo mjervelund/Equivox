@@ -197,6 +197,7 @@ public final class ServerConfig extends BasePEConfig {
 
 		public final CachedBooleanValue unsafeKeyBinds;
 		public final CachedBooleanValue lookingAtDisplay;
+		public final CachedIntValue collectorTickInterval;
 
 		private Misc(IPEConfig config, ModConfigSpec.Builder builder) {
 			PEConfigTranslations.SERVER_MISC.applyToBuilder(builder).push("misc");
@@ -204,6 +205,8 @@ public final class ServerConfig extends BasePEConfig {
 					.define("unsafeKeyBinds", false));
 			lookingAtDisplay = CachedBooleanValue.wrap(config, PEConfigTranslations.SERVER_MISC_LOOKING_AT_DISPLAY.applyToBuilder(builder)
 					.define("lookingAtDisplay", true));
+			collectorTickInterval = CachedIntValue.wrap(config, PEConfigTranslations.SERVER_MISC_COLLECTOR_TICK_INTERVAL.applyToBuilder(builder)
+					.defineInRange("collectorTickInterval", SharedConstants.TICKS_PER_SECOND, 1, 10 * SharedConstants.TICKS_PER_SECOND));
 			builder.pop();
 		}
 	}
