@@ -233,6 +233,10 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 				if (emcHolder != null) {
 					long actualInserted = emcHolder.insertEmc(upgrading, Math.min(getStoredEmc(), emcGen * ticks), EmcAction.EXECUTE);
 					forceExtractEmc(actualInserted, EmcAction.EXECUTE);
+					if (actualInserted > 0) {
+						//getUpgrading is a copy of the slot, so store the charged stack
+						auxSlots.setStackInSlot(UPGRADING_SLOT, upgrading);
+					}
 				}
 				return;
 			} else if (hasFuel) {
@@ -249,12 +253,15 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 						if (upgrade.isEmpty()) {
 							forceExtractEmc(upgradeCost, EmcAction.EXECUTE);
 							auxSlots.setStackInSlot(UPGRADE_SLOT, result);
+							//getUpgrading/getUpgraded are copies of the slots, so store the changed stacks
 							upgrading.shrink(1);
+							auxSlots.setStackInSlot(UPGRADING_SLOT, upgrading);
 						} else if (result.is(upgrade.getItem()) && upgrade.getCount() < upgrade.getMaxStackSize()) {
 							forceExtractEmc(upgradeCost, EmcAction.EXECUTE);
 							upgrade.grow(1);
 							upgrading.shrink(1);
-							auxSlots.onContentsChanged(UPGRADE_SLOT);
+							auxSlots.setStackInSlot(UPGRADE_SLOT, upgrade);
+							auxSlots.setStackInSlot(UPGRADING_SLOT, upgrading);
 						}
 					}
 					return;
