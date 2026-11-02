@@ -4,6 +4,7 @@ import com.yaskulsky.equivox.api.block_entity.IRelay;
 import com.yaskulsky.equivox.api.capabilities.PECapabilities;
 import com.yaskulsky.equivox.api.capabilities.item.IItemEmcHolder;
 import com.yaskulsky.equivox.api.proxy.IEMCProxy;
+import com.yaskulsky.equivox.config.EquivoxConfig;
 import com.yaskulsky.equivox.gameObjs.EnumRelayTier;
 import com.yaskulsky.equivox.gameObjs.container.RelayMK1Container;
 import com.yaskulsky.equivox.gameObjs.container.slots.SlotPredicates;
@@ -48,7 +49,13 @@ public class RelayMK1BlockEntity extends EmcBlockEntity implements MenuProvider,
 	};
 
 	private final CompactableStackHandler input;
-	private final PEItemStacksHandler output = new StackHandler(1);
+	private final PEItemStacksHandler output = new StackHandler(1) {
+		@Override
+		protected void onContentsChanged(int slot) {
+			super.onContentsChanged(slot);
+			updateSlotsEmpty();
+		}
+	};
 
 	private final WrappedItemHandler automationOutput;
 	private final WrappedItemHandler automationInput;
@@ -57,6 +64,10 @@ public class RelayMK1BlockEntity extends EmcBlockEntity implements MenuProvider,
 	private final long chargeRate;
 
 	private double bonusEMC;
+	//Ticks since the relay last sent EMC (see tickServer)
+	private int pendingTicks;
+	//Whether the burn and charge slots are empty, kept here so the ticks that skip work do not read the inventory
+	private boolean burnAndChargeEmpty = true;
 
 	public RelayMK1BlockEntity(BlockPos pos, BlockState state) {
 		this(PEBlockEntityTypes.RELAY, pos, state, 7, EnumRelayTier.MK1);
@@ -70,6 +81,12 @@ public class RelayMK1BlockEntity extends EmcBlockEntity implements MenuProvider,
 			@Override
 			public ItemStack insertItem(int slot, @NotNull ItemStack stack, boolean simulate) {
 				return SlotPredicates.RELAY_INV.test(stack) ? super.insertItem(slot, stack, simulate) : stack;
+			}
+
+			@Override
+			protected void onContentsChanged(int slot) {
+				super.onContentsChanged(slot);
+				updateSlotsEmpty();
 			}
 		};
 
@@ -122,8 +139,21 @@ public class RelayMK1BlockEntity extends EmcBlockEntity implements MenuProvider,
 	}
 
 	public static void tickServer(Level level, BlockPos pos, BlockState state, RelayMK1BlockEntity relay) {
-		relay.sendToAllAcceptors(level, pos, relay.getAvailableCharge());
+		relay.pendingTicks++;
+		//Compacting moves any input into the burn slot, so after it an empty burn slot means an empty input
 		relay.input.compact();
+		int interval = EquivoxConfig.server.misc.relayTickInterval.get();
+		if (interval > 1 && relay.burnAndChargeEmpty && relay.pendingTicks < interval
+			&& Math.floorMod(level.getGameTime() + pos.hashCode(), interval) != 0) {
+			//With nothing to burn or charge a relay only passes EMC on to its neighbours, so do that every interval ticks with
+			// the send limit of all the ticks since the last time (same EMC per hour). The position spreads the relays over the
+			// interval. Collectors still insert EMC between those ticks, so keep comparators current.
+			relay.updateComparators(level, pos);
+			return;
+		}
+		int ticks = relay.pendingTicks;
+		relay.pendingTicks = 0;
+		relay.sendToAllAcceptors(level, pos, Math.min(relay.chargeRate * ticks, relay.getStoredEmc()));
 		ItemStack stack = relay.getBurn();
 		if (!stack.isEmpty()) {
 			IItemEmcHolder emcHolder = stack.getCapability(PECapabilities.EMC_HOLDER_ITEM_CAPABILITY);
@@ -151,6 +181,10 @@ public class RelayMK1BlockEntity extends EmcBlockEntity implements MenuProvider,
 			}
 		}
 		relay.updateComparators(level, pos);
+	}
+
+	private void updateSlotsEmpty() {
+		burnAndChargeEmpty = input.getResource(0).isEmpty() && output.getResource(0).isEmpty();
 	}
 
 	private long getAvailableCharge() {
@@ -183,7 +217,9 @@ public class RelayMK1BlockEntity extends EmcBlockEntity implements MenuProvider,
 		super.loadAdditional(input);
 		this.input.deserialize(input.childOrEmpty("input"));
 		this.output.deserialize(input.childOrEmpty("output"));
+		updateSlotsEmpty();
 		bonusEMC = input.getDoubleOr("bonus_emc", 0);
+		pendingTicks = input.getIntOr("pending_ticks", 0);
 	}
 
 	@Override
@@ -192,6 +228,9 @@ public class RelayMK1BlockEntity extends EmcBlockEntity implements MenuProvider,
 		this.input.serialize(output.child("input"));
 		this.output.serialize(output.child("output"));
 		output.putDouble("bonus_emc", bonusEMC);
+		if (pendingTicks > 0) {
+			output.putInt("pending_ticks", pendingTicks);
+		}
 	}
 
 	@Override
