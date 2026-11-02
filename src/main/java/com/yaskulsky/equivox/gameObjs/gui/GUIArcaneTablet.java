@@ -163,7 +163,7 @@ public class GUIArcaneTablet extends PEContainerScreen<ArcaneTabletContainer> {
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		double x = event.x();
 		double y = event.y();
-		if (textBoxFilter.isMouseOver(x, y) && event.button() == 1) {
+		if (textBoxFilter.isMouseOver(x, y) && event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
 			this.textBoxFilter.setValue("");
 			setFocused(this.textBoxFilter);
 			return true;
