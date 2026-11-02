@@ -2,6 +2,7 @@ package com.yaskulsky.equivox.gameObjs.block_entities;
 
 import com.yaskulsky.equivox.api.block_entity.IRelay;
 import com.yaskulsky.equivox.api.capabilities.PECapabilities;
+import com.yaskulsky.equivox.api.capabilities.block_entity.IEmcStorage;
 import com.yaskulsky.equivox.api.capabilities.item.IItemEmcHolder;
 import com.yaskulsky.equivox.api.proxy.IEMCProxy;
 import com.yaskulsky.equivox.emc.FuelMapper;
@@ -13,7 +14,6 @@ import com.yaskulsky.equivox.gameObjs.registries.PEBlockEntityTypes;
 import com.yaskulsky.equivox.gameObjs.registries.PEBlocks;
 import com.yaskulsky.equivox.utils.Constants;
 import com.yaskulsky.equivox.utils.ItemHelper;
-import com.yaskulsky.equivox.utils.WorldHelper;
 import com.yaskulsky.equivox.utils.text.TextComponentUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -26,7 +26,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.ICapabilityProvider;
 import net.neoforged.neoforge.transfer.ResourceHandler;
@@ -333,12 +332,13 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 		auxSlots.serialize(output.child("aux_slots"));
 	}
 
-	private static void sendRelayBonus(@NotNull Level level, @NotNull BlockPos pos) {
+	private void sendRelayBonus(@NotNull Level level, @NotNull BlockPos pos) {
 		for (Direction dir : Constants.DIRECTIONS) {
-			BlockPos relayPos = pos.relative(dir);
-			BlockEntity blockEntity = WorldHelper.getBlockEntity(level, relayPos);
-			if (blockEntity instanceof IRelay relay) {
-				relay.addBonus(level, relayPos);
+			//Our relays expose themselves as their EMC storage on every side, so use the cached neighbour lookup instead of
+			// looking up the six neighbouring block entities every tick
+			IEmcStorage neighbour = getAcceptor(level, pos, dir);
+			if (neighbour instanceof IRelay relay) {
+				relay.addBonus(level, pos.relative(dir));
 			}
 		}
 	}
