@@ -108,6 +108,9 @@ public enum PEConfigTranslations implements IConfigTranslation {
 			"False requires your hand be empty for Gem Armor Offensive Abilities to be readied or triggered."),
 	SERVER_MISC_LOOKING_AT_DISPLAY("server.misc.looking_at_display", "Looking At Display",
 			"Shows the EMC value of blocks when looking at them in Jade, TOP, or WTHIT."),
+	SERVER_MISC_RELAY_TICK_INTERVAL("server.misc.relay_tick_interval", "Relay Tick Interval",
+			"Relays with empty burn and charge slots send their EMC every this many ticks, the amount of all those ticks at once, "
+			+ "so they move the same EMC per hour for less server time. 1 = every tick."),
 
 	//EMC Mapping
 	MAPPING_DUMP_TO_FILE("mapping.dump_to_file", "Dump Everything To File",
