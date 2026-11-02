@@ -148,6 +148,12 @@ public class CollectorMK1BlockEntity extends EmcBlockEntity implements MenuProvi
 		return true;
 	}
 
+	@Override
+	protected int emcComparatorLevel() {
+		//With an item in the upgrading slot the comparator shows the item's charge or the fuel progress (see Collector#getAnalogOutputSignal)
+		return auxSlots.getResource(UPGRADING_SLOT).isEmpty() ? super.emcComparatorLevel() : -1;
+	}
+
 	public static void tickServer(Level level, BlockPos pos, BlockState state, CollectorMK1BlockEntity collector) {
 		if (collector.needsCompacting) {
 			ItemHelper.compactInventory(collector.toSort, collector.toSort);

@@ -8,6 +8,7 @@ import com.yaskulsky.equivox.api.capabilities.block_entity.IEmcStorage;
 import com.yaskulsky.equivox.gameObjs.registration.impl.BlockEntityTypeRegistryObject;
 import com.yaskulsky.equivox.utils.Constants;
 import com.yaskulsky.equivox.utils.ItemHelper;
+import com.yaskulsky.equivox.utils.MathUtils;
 import com.yaskulsky.equivox.utils.WorldHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -29,6 +30,10 @@ import org.jetbrains.annotations.Range;
 public abstract class EmcBlockEntity extends BaseEmcBlockEntity {
 
 	private boolean updateComparators;
+	//The stored EMC changed since the last updateComparators (only tracked if emcAffectsComparators)
+	private boolean emcChangedForComparators;
+	//Comparator level of the stored EMC (see emcComparatorLevel) when comparators were last updated or checked, -1 = unknown
+	private int lastEmcComparatorLevel = -1;
 	private long lastSave;
 	//Neighbouring IEmcStorage lookups for sendToAllAcceptors, indexed by Direction#ordinal; created on first use on the server
 	@Nullable
@@ -48,7 +53,20 @@ public abstract class EmcBlockEntity extends BaseEmcBlockEntity {
 		//Only update the comparator state if we need to update comparators
 		//Note: We call this at the end of child implementations to try and update any changes immediately instead
 		// of them having to be delayed a tick
+		if (emcChangedForComparators) {
+			//The stored EMC of collectors and relays changes every tick, mostly without changing the comparator level (a collector
+			// even ends most ticks back at 0 after sending), and updating comparators looks up the neighbouring block states and
+			// notifies them, so only do it when the level differs from the one comparators were last updated with
+			emcChangedForComparators = false;
+			int comparatorLevel = emcComparatorLevel();
+			if (comparatorLevel < 0 || comparatorLevel != lastEmcComparatorLevel) {
+				updateComparators = true;
+			}
+		}
 		if (updateComparators) {
+			if (emcAffectsComparators()) {
+				lastEmcComparatorLevel = emcComparatorLevel();
+			}
 			BlockState state = getBlockState();
 			if (!state.isAir()) {
 				level.updateNeighbourForOutputSignal(pos, state.getBlock());
@@ -61,10 +79,23 @@ public abstract class EmcBlockEntity extends BaseEmcBlockEntity {
 		return false;
 	}
 
+	/**
+	 * The comparator level our block derives from the stored EMC, so that EMC changes only update comparators when they move it.
+	 *
+	 * @return The level, or -1 if the comparator output does not only depend on the stored and maximum EMC right now, in which
+	 * case every EMC change updates comparators.
+	 */
+	protected int emcComparatorLevel() {
+		return MathUtils.scaleToRedstone(getStoredEmc(), getMaximumEmc());
+	}
+
 	@Override
 	protected void storedEmcChanged() {
 		if (level != null) {
-			markDirty(level, worldPosition, emcAffectsComparators());
+			markDirty(level, worldPosition, false);
+			if (emcAffectsComparators() && !level.isClientSide()) {
+				emcChangedForComparators = true;
+			}
 		}
 	}
 
