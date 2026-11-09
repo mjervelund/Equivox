@@ -85,8 +85,14 @@ public class AlchBlockEntityChest extends EmcChestBlockEntity {
 		for (int i = 0, slots = inventory.getSlots(); i < slots; i++) {
 			ItemStack stack = inventory.getStackInSlot(i);
 			IAlchChestItem alchChestItem = stack.getCapability(PECapabilities.ALCH_CHEST_ITEM_CAPABILITY);
-			if (alchChestItem != null && alchChestItem.updateInAlchChest(level, pos, stack)) {
-				inventory.onContentsChanged(i);
+			if (alchChestItem != null) {
+				ItemResource read = inventory.getResource(i);
+				int amount = stack.getCount();
+				boolean changed = alchChestItem.updateInAlchChest(level, pos, stack);
+				//stack is a copy: store what the item changed on it (talisman cooldown, gem EMC), which calls onContentsChanged
+				if (!inventory.storeChangedCopy(i, read, amount, stack) && changed) {
+					inventory.onContentsChanged(i);
+				}
 			}
 		}
 		alchChest.tickingItems = false;

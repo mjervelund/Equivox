@@ -20,6 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import com.yaskulsky.equivox.api.inventory.PEItemStacksHandler;
 
 @EventBusSubscriber(modid = PECore.MODID)
@@ -36,8 +37,14 @@ public class TickEvents {
 				for (int i = 0, slots = inv.getSlots(); i < slots; i++) {
 					ItemStack current = inv.getStackInSlot(i);
 					IAlchBagItem alchBagItem = current.getCapability(PECapabilities.ALCH_BAG_ITEM_CAPABILITY);
-					if (alchBagItem != null && alchBagItem.updateInAlchBag(inv, player, current)) {
-						colorsChanged.add(color);
+					if (alchBagItem != null) {
+						ItemResource read = inv.getResource(i);
+						int amount = current.getCount();
+						if (alchBagItem.updateInAlchBag(inv, player, current)) {
+							colorsChanged.add(color);
+						}
+						//current is a copy: store what the item changed on it (talisman cooldown, gem EMC), whatever it returned
+						inv.storeChangedCopy(i, read, amount, current);
 					}
 				}
 			}
