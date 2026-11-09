@@ -23,7 +23,9 @@ public final class ItemCapabilityHelper {
 		if (stack.isEmpty()) {
 			return null;
 		}
-		return ItemAccess.forStack(stack).getCapability(Capabilities.Item.ITEM);
+		//Ask the stack itself: ItemAccess.getCapability passes a copy of the stack to the provider, so a handler that keeps
+		// its contents in the stack's components (the Mercurial Eye) would write them into that copy
+		return stack.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(stack));
 	}
 
 	@Nullable
