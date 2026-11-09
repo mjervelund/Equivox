@@ -77,6 +77,27 @@ public class PEItemStacksHandler extends ItemStacksResourceHandler implements In
 		return isValid(slot, ItemResource.of(stack));
 	}
 
+	/**
+	 * Stores a stack that was read from a slot with {@link #getStackInSlot(int)} and then changed in place (an item's tick
+	 * changing its own components). {@link #getStackInSlot(int)} returns a copy, so such changes are lost unless stored.
+	 *
+	 * @param read       the slot's resource when the stack was read
+	 * @param readAmount the stack's count when it was read
+	 *
+	 * @return true if the changed stack was stored. Nothing is stored if the stack did not change, or if the slot no longer
+	 * holds what was read (it was changed through the handler meanwhile, and that change is kept).
+	 */
+	public boolean storeChangedCopy(int slot, @NotNull ItemResource read, int readAmount, @NotNull ItemStack changed) {
+		if (changed.getCount() == readAmount && read.matches(changed)) {
+			return false;
+		}
+		if (getAmountAsInt(slot) != readAmount || !getResource(slot).equals(read)) {
+			return false;
+		}
+		setStackInSlot(slot, changed);
+		return true;
+	}
+
 	@Override
 	protected void onContentsChanged(int index, ItemStack previousContents) {
 		onContentsChanged(index);
