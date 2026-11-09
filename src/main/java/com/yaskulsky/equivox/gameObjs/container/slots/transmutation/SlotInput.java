@@ -57,6 +57,8 @@ public class SlotInput extends InventoryContainerSlot {
 					//try to insert it
 					long actualInserted = emcHolder.insertEmc(stack, shrunkenAvailableEMC, EmcAction.EXECUTE);
 					if (actualInserted > 0) {
+						//super.setStackCopy stored a copy: store the charged star
+						super.setStackCopy(stack);
 						//if we actually managed to insert some sync the slots changed, but don't update targets
 						// as that will be done by removing the emc and syncing how much is stored there
 						inv.syncChangedSlots(IntList.of(getSlotIndex()), TargetUpdateType.NONE);

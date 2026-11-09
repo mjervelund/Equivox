@@ -53,6 +53,8 @@ public class SlotLock extends InventoryContainerSlot {
 				if (emcHolder != null) {
 					long actualExtracted = emcHolder.extractEmc(stack, emcHolder.getStoredEmc(stack), EmcAction.EXECUTE);
 					if (actualExtracted > 0) {
+						//super.setStackCopy stored a copy: store the drained star
+						super.setStackCopy(stack);
 						inv.syncChangedSlots(IntList.of(getSlotIndex()), TargetUpdateType.NONE);
 						inv.addEmc(BigInteger.valueOf(actualExtracted));
 					} else {
