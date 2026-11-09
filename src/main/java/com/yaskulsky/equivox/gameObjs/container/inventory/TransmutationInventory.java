@@ -443,6 +443,8 @@ public class TransmutationInventory extends PECombinedItemStacks {
 				long shrunkenValue = MathUtils.clampToLong(value);
 				long actualInserted = emcHolder.insertEmc(stack, shrunkenValue, EmcAction.EXECUTE);
 				if (actualInserted > 0) {
+					//stack is a copy: store the charged one
+					inputLocks.setStackInSlot(slotIndex, stack);
 					inputLocksChanged.add(slotIndex);
 					value = value.subtract(BigInteger.valueOf(actualInserted));
 					if (value.signum() == 0) {//value == 0
@@ -491,6 +493,8 @@ public class TransmutationInventory extends PECombinedItemStacks {
 					long shrunkenToRemove = MathUtils.clampToLong(toRemove);
 					long actualExtracted = emcHolder.extractEmc(stack, shrunkenToRemove, EmcAction.EXECUTE);
 					if (actualExtracted > 0) {
+						//stack is a copy: store the drained one
+						inputLocks.setStackInSlot(slotIndex, stack);
 						inputLocksChanged.add(slotIndex);
 						toRemove = toRemove.subtract(BigInteger.valueOf(actualExtracted));
 						if (toRemove.signum() == 0) {//toRemove == 0
