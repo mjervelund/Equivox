@@ -79,8 +79,14 @@ public class DMPedestalBlockEntity extends EmcBlockEntity implements IDMPedestal
 			IPedestalItem pedestalItem = stack.getCapability(PECapabilities.PEDESTAL_ITEM_CAPABILITY);
 			if (pedestalItem == null) {
 				pedestal.setActive(level, pos, false);
-			} else if (pedestalItem.updateInPedestal(stack, level, pos, pedestal)) {
-				pedestal.inventory.onContentsChanged(0);
+			} else {
+				ItemResource read = pedestal.inventory.getResource(0);
+				int amount = stack.getCount();
+				boolean changed = pedestalItem.updateInPedestal(stack, level, pos, pedestal);
+				//stack is a copy: store what the item changed on it (Mind Stone XP), which calls onContentsChanged
+				if (!pedestal.inventory.storeChangedCopy(0, read, amount, stack) && changed) {
+					pedestal.inventory.onContentsChanged(0);
+				}
 			}
 		}
 		pedestal.updateComparators(level, pos);
