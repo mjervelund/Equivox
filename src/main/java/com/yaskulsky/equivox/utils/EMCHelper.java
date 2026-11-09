@@ -28,6 +28,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Range;
 
@@ -79,7 +80,7 @@ public final class EMCHelper {
 		ResourceHandler<ItemResource> curios = IntegrationHelper.getCurioItemHandler(player);
 		if (curios != null) {
 			for (int i = 0, slots = PEItemStacksHandler.getSlotCount(curios); i < slots; i++) {
-				long actualExtracted = tryExtract(PEItemStacksHandler.getStack(curios, i), minFuel);
+				long actualExtracted = tryExtract(curios, i, PEItemStacksHandler.getStack(curios, i), minFuel);
 				if (actualExtracted > 0) {
 					player.containerMenu.broadcastChanges();
 					return actualExtracted;
@@ -99,7 +100,7 @@ public final class EMCHelper {
 				if (stack.isEmpty()) {
 					continue;
 				}
-				long actualExtracted = tryExtract(stack, minFuel);
+				long actualExtracted = tryExtract(inv, i, stack, minFuel);
 				if (actualExtracted > 0) { //Prioritize extracting from emc storage items
 					player.containerMenu.broadcastChanges();
 					return actualExtracted;
@@ -128,12 +129,24 @@ public final class EMCHelper {
 		return -1;
 	}
 
-	private static long tryExtract(@NotNull ItemStack stack, long minFuel) {
+	/**
+	 * @param stack the stack in the slot: a copy (handlers return copies), so the drained stack is stored back into the slot.
+	 */
+	private static long tryExtract(@NotNull ResourceHandler<ItemResource> inv, int slot, @NotNull ItemStack stack, long minFuel) {
 		IItemEmcHolder emcHolder = stack.getCapability(PECapabilities.EMC_HOLDER_ITEM_CAPABILITY);
 		if (emcHolder != null) {
 			long simulatedExtraction = emcHolder.extractEmc(stack, minFuel, EmcAction.SIMULATE);
 			if (simulatedExtraction >= minFuel) {
-				return emcHolder.extractEmc(stack, simulatedExtraction, EmcAction.EXECUTE);
+				ItemResource before = inv.getResource(slot);
+				int count = stack.getCount();
+				long extracted = emcHolder.extractEmc(stack, simulatedExtraction, EmcAction.EXECUTE);
+				//Replace the stack in the slot with the drained one; if the handler refuses, give no EMC
+				try (Transaction tx = Transaction.openRoot()) {
+					if (inv.extract(slot, before, count, tx) == count && inv.insert(slot, ItemResource.of(stack), count, tx) == count) {
+						tx.commit();
+						return extracted;
+					}
+				}
 			}
 		}
 		return 0;
