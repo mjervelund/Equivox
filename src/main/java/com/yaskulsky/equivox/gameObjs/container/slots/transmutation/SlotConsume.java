@@ -22,7 +22,10 @@ public class SlotConsume extends InventoryContainerSlot {
 		if (inv.isServer() && !stack.isEmpty()) {
 			inv.handleKnowledge(stack);
 			inv.addEmc(BigInteger.valueOf(IEMCProxy.INSTANCE.getSellValue(stack)).multiply(BigInteger.valueOf(stack.getCount())));
-			this.setChanged();
+			//The slot keeps nothing. StackCopySlot.set caches this stack and setChanged() puts the cached stack back in
+			// when it differs from the (empty) slot, which would burn it again (EMC twice) and, called from here, recurse
+			// until the stack overflows. The consumed stack is gone, so empty it.
+			stack.setCount(0);
 		}
 	}
 
