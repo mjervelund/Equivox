@@ -318,6 +318,12 @@ public class ToolHelper {
 		}
 		List<ItemStack> drops = new ArrayList<>();
 		for (BlockPos digPos : getTargets(pos, player, result.getDirection(), mode)) {
+			if (digPos.equals(pos)) {
+				//mineBlock runs before the game breaks the targeted block, which then drops it itself. Breaking it here too
+				// dropped blocks twice that drop in playerWillDestroy (computers, turtles) or stay until playerDestroy
+				// (ender chests and tanks)
+				continue;
+			}
 			BlockState state = level.getBlockState(digPos);
 			if (!state.isAir() && state.getDestroySpeed(level, digPos) != Block.INDESTRUCTIBLE && stack.isCorrectToolForDrops(state)) {
 				//Ensure we are immutable so that changing blocks doesn't act weird
