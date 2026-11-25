@@ -265,7 +265,7 @@ repositories { RepositoryHandler handler ->
 
 test {
     useJUnitPlatform()
-    enabled = false
+    enabled = true
 }
 
 // JAR name / mods.toml MC range can be 26.3 while deps (JEI) still use 26.1.2 — set dep_minecraft_version
