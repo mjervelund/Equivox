@@ -198,6 +198,8 @@
     "configuration.equivox.mapping.mapper.blacklist.raw_ore":  "Raw Ore Blacklist Mapper",
     "configuration.equivox.mapping.mapper.blacklist.raw_ore.button":  "Edit Raw Ores Blacklist",
     "configuration.equivox.mapping.mapper.blacklist.raw_ore.tooltip":  "Set EMC=0 for everything in the c:raw_materials tag.",
+    "configuration.equivox.mapping.mapper.material_forms":  "Material Forms Mapper",
+    "configuration.equivox.mapping.mapper.material_forms.tooltip":  "Values dusts, raw materials, ores, plates and Mekanism ore stages (c:<form>/<material> tags) at one ingot or gem of their material.",
     "configuration.equivox.mapping.mapper.brewing":  "Brewing Mapper",
     "configuration.equivox.mapping.mapper.brewing.button":  "Edit Brewing Mapper",
     "configuration.equivox.mapping.mapper.brewing.tooltip":  "Add Conversions for Brewing Recipes.",
