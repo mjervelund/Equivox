@@ -148,6 +148,8 @@ public enum PEConfigTranslations implements IConfigTranslation {
 			"Edit Ore Blacklist"),
 	MAPPING_BLACKLIST_RAW_ORE_MAPPER("mapping.mapper.blacklist.raw_ore", "Raw Ore Blacklist Mapper",
 			"Set EMC=0 for everything in the c:raw_materials tag.", "Edit Raw Ores Blacklist"),
+	MAPPING_MATERIAL_FORMS_MAPPER("mapping.mapper.material_forms", "Material Forms Mapper",
+			"Values dusts, raw materials, ores, plates and Mekanism ore stages (c:<form>/<material> tags) at one ingot or gem of their material."),
 
 	MAPPING_CRAFTING_MAPPER("mapping.mapper.crafting", "Crafting Mapper",
 			"Add Conversions for Crafting Recipes gathered from net.minecraft.world.item.crafting.RecipeManager", true),
